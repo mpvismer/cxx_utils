@@ -1,19 +1,24 @@
 #pragma once
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
+
+#include <spdlog/async.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+
+#include <vector>
 
 // See https://github.com/gabime/spdlog
 
+#define LOG_TRACE(...) SPDLOG_LOGGER_TRACE(logger::instance().get_root_logger(), __VA_ARGS__);
+#define LOG_DEBUG(...) SPDLOG_LOGGER_DEBUG(logger::instance().get_root_logger(), __VA_ARGS__);
+#define LOG_INFO(...) SPDLOG_LOGGER_INFO(logger::instance().get_root_logger(), __VA_ARGS__);
+#define LOG_WARN(...) SPDLOG_LOGGER_WARN(logger::instance().get_root_logger(), __VA_ARGS__);
+#define LOG_WARNING(...) SPDLOG_LOGGER_WARN(logger::instance().get_root_logger(), __VA_ARGS__);
+#define LOG_ERROR(...) SPDLOG_LOGGER_ERROR(logger::instance().get_root_logger(), __VA_ARGS__);
+#define LOG_CRITICAL(...) SPDLOG_LOGGER_CRITICAL(logger::instance().get_root_logger(), __VA_ARGS__);
 
-#define LOG_TRACE(...) SPDLOG_LOGGER_TRACE(logger::instance()->get_root_logger(), __VA_ARGS__);
-#define LOG_DEBUG(...) SPDLOG_LOGGER_DEBUG(logger::instance()->get_root_logger(), __VA_ARGS__);
-#define LOG_INFO(...) SPDLOG_LOGGER_INFO(logger::instance()->get_root_logger(), __VA_ARGS__);
-#define LOG_WARN(...) SPDLOG_LOGGER_WARN(logger::instance()->get_root_logger(), __VA_ARGS__);
-#define LOG_WARNING(...) SPDLOG_LOGGER_WARN(logger::instance()->get_root_logger(), __VA_ARGS__);
-#define LOG_ERROR(...) SPDLOG_LOGGER_ERROR(logger::instance()->get_root_logger(), __VA_ARGS__);
-#define LOG_CRITICAL(...) SPDLOG_LOGGER_CRITICAL(logger::instance()->get_root_logger(), __VA_ARGS__);
-
-#include <vector>
 
 //See https://stackoverflow.com/questions/1008019/how-do-you-implement-the-singleton-design-pattern
 // re the singleton pattern
@@ -21,9 +26,11 @@
 class logger
 {
 public:
+    const std::string default_log_pattern = "%H:%M:%S.%f [%L] %05t:%s:%-4# - %v";
+
     static logger& instance()
     {
-        static logger instance; // Instantiated on first use.
+        static logger instance("logging.log"); // Instantiated on first use.
         return instance;
     }
 
@@ -33,10 +40,10 @@ public:
     
     // Creates a brand new logger with it's own sink (which is also in the worker thread pool)
     // Handy for example to create a threaded csv logger.
-    std::shared_ptr<spdlog::logger> new_logger(const std::string& filename);
+    std::shared_ptr<spdlog::logger> new_logger(const std::string& filename)
     {
         auto logger = spdlog::basic_logger_mt<spdlog::async_factory>(filename, "logs/"+filename);
-        logger->set_pattern("%H:%M:%S.%f, %v");
+        logger->set_pattern("%H:%M:%S.%f, %v"); // an example, can be changed
         return logger;
     }
     
@@ -68,9 +75,13 @@ private:
     {
         // Sets up multithreaded logging where logs can be called from 
         // any thread and all sinks run in a single worker thread.
+		auto on_thread_start = []() {
+			//WIN32: SetThreadPriority(GetCurrentThread(), -1);
+            //POSIX: pthread_setschedparam(thread.native_handle(), policy, {priority});
+		};
         
         // Create a threadpool with 1 thread and queue size of 8192
-        spdlog::init_thread_pool(8192, 1);  
+        spdlog::init_thread_pool(8192, 1, on_thread_start);  
         
         // Create the sinks
         std::shared_ptr<spdlog::sinks::sink> fileSink;
@@ -89,9 +100,8 @@ private:
             "", begin(sinks), end(sinks), spdlog::thread_pool(), spdlog::async_overflow_policy::overrun_oldest);
         _root_logger->set_level(spdlog::level::trace);
         _root_logger->flush_on(spdlog::level::trace);
-        root_logger = _root_logger;
-        // Cannot register an unnames logger
-        //spdlog::register_logger(root_logger);  
+        // Cannot register an unnamed logger
+        //spdlog::register_logger(_root_logger);  
     }
     
 private:
