@@ -31,9 +31,23 @@ add_executable(logging
 set_target_properties(logging PROPERTIES LINKER_LANGUAGE CXX)
 
 add_executable(udpserver
+  "${EXAMPLE_DIR}/udpserver.cpp"
+  "${SRC_DIR}/udpserver.hpp"
+  "${SRC_DIR}/utils.hpp"
   "${SRC_DIR}/logger.hpp")  
 set_target_properties(udpserver PROPERTIES LINKER_LANGUAGE CXX)
 
 if(WIN32)
+  target_sources(udpserver PRIVATE "${SRC_DIR}/utils_win32.cpp")
   target_link_libraries(udpserver ws2_32)
+endif(WIN32)
+
+add_executable(realtime
+  "${EXAMPLE_DIR}/realtime.cpp"
+  "${SRC_DIR}/utils.hpp"
+  "${SRC_DIR}/logger.hpp")  
+set_target_properties(realtime PROPERTIES LINKER_LANGUAGE CXX)
+
+if(WIN32)
+  target_sources(realtime PRIVATE "${SRC_DIR}/utils_win32.cpp")
 endif(WIN32)

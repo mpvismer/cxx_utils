@@ -2,6 +2,8 @@
 
 #include <chrono>
 #include <sstream>
+#include <iomanip> // for setprecision
+
 
 class timeit {
   public:
@@ -13,7 +15,18 @@ class timeit {
     //   https://stackoverflow.com/questions/67233593/stdchronohigh-resolution-clock-based-frame-timer
     // steady_clock is monotonic and hopefully has enough resolution? 
     using clock = std::chrono::steady_clock;
-    using resolution = std::chrono::duration<double, std::chrono::milliseconds::period>;
+    using resolution = std::chrono::duration<double, std::chrono::microseconds::period>;
+
+    static void spin_delay_ms(uint32_t ms)
+    {
+        spin_delay(std::chrono::milliseconds(ms));
+    }
+
+    static void spin_delay(std::chrono::nanoseconds ms)
+    {
+        auto start = clock::now();
+        while (clock::now() < start + ms);
+    }
 
     timeit()
     {
